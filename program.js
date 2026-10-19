@@ -81,7 +81,7 @@
     { id: 'morning', title: 'Morning Quest: weigh in, then move', body: 'Weigh in, then do today\'s Gate. Open ARISE.', time: '07:00', days: ICS_DAYS, on: true },
     { id: 'meal', title: 'Fuel check: protein', body: 'Hit your protein. Log it in ARISE.', time: '12:30', days: ICS_DAYS, on: true },
     { id: 'evening', title: 'Evening Quest: finish the Gate', body: 'Daily quest is not done. Penalty Zone awaits if you skip.', time: '18:30', days: ICS_DAYS, on: true },
-    { id: 'sleep', title: 'Recovery: CPAP and bed', body: 'CPAP on. Sleep is part of the training.', time: '22:00', days: ICS_DAYS, on: true }
+    { id: 'sleep', title: 'Recovery: wind down and bed', body: 'Phone down, lights out soon. Sleep is part of the training.', time: '22:00', days: ICS_DAYS, on: true }
   ];
 
   const LINES = [

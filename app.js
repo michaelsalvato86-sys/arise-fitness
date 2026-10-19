@@ -48,7 +48,7 @@
     <label>Goal weight (lb)</label><input id="goal" type="number" inputmode="decimal" value="180">
     <label>Beta blocker? (name ends in -olol)</label><select id="bb"><option value="0">No / not sure</option><option value="1">Yes</option></select>
     <button class="go" id="start" style="margin-top:16px">Accept</button></div>
-    <p class="dim">Not medical advice. You said your doctor cleared you. Keep following their guidance on BP and CPAP.</p>`;
+    <p class="dim">Not medical advice. You said your doctor cleared you. Keep following their guidance on blood pressure.</p>`;
     $('#start').onclick = () => {
       const age = +$('#age').value, ft = +$('#ft').value, inch = +$('#inch').value || 0, wt = +$('#wt').value, goal = +$('#goal').value;
       const heightIn = ft * 12 + inch;
@@ -110,7 +110,9 @@
     <div class="dim">Walk quest uses the higher of the two, never both added.</div>
     <label>Protein today (g)</label><div class="inl"><input id="in-prot" type="number" inputmode="numeric" value="${d.protein || ''}"><button class="sm" data-add="20">+20</button><button class="sm" data-add="30">+30</button></div>
     <label>Isometric holds done</label><div class="inl"><input type="checkbox" id="in-hold" ${d.hold ? 'checked' : ''}> <span>Wall sit / squeeze holds</span></div>
-    <label>CPAP on + bed on time (last night)</label><div class="inl"><input type="checkbox" id="in-sleep" ${d.sleep ? 'checked' : ''}> <span>Done</span></div>
+    <label>Sleep last night (hours)</label><input id="in-sleephr" type="number" inputmode="decimal" step="0.1" value="${d.sleepHr || ''}">
+    <label>Steps today</label><input id="in-steps" type="number" inputmode="numeric" value="${d.steps || ''}">
+    <label>Or just tick: in bed on time</label><div class="inl"><input type="checkbox" id="in-sleep" ${d.sleep ? 'checked' : ''}> <span>Done</span></div>
     <label>Blood pressure (sys / dia)</label><div class="inl"><input id="in-sys" type="number" inputmode="numeric" placeholder="sys"><input id="in-dia" type="number" inputmode="numeric" placeholder="dia"><button class="sm" data-act="bp">Save</button></div>
     <div class="dim">Recent: ${bpHtml}</div>
     <label>Sick or doctor said rest</label><div class="inl"><input type="checkbox" id="in-rest" ${d.rest ? 'checked' : ''}> <span>Rest pass (keeps streak, no penalty)</span></div></div>`;
@@ -191,8 +193,17 @@
     <button class="go" data-act="ics" style="margin-top:12px">Download reminder calendar</button>
     <p class="dim">Tap the file, then "Add All" to a calendar. Changed a time? Delete the old ARISE System calendar first.</p>
     <p class="dim">Backup: also set 2 alarms in the Clock app (7:00 and 18:30), since calendar alerts can be silenced by Focus modes.</p></div>
+    <div class="win"><h2>Auto-sync from Apple Health</h2>
+    <p class="dim">A web app cannot read Health itself, so an iPhone Shortcut does it and sends the numbers here. One-time setup, about 5 minutes:</p>
+    <p class="dim">1. Open the <b>Shortcuts</b> app, tap + for a new shortcut.<br>
+    2. Add <b>Find Health Samples</b>: Type = Steps, Start Date is today. Then <b>Calculate Statistics</b> (Sum), name it Steps.<br>
+    3. Add <b>Find Health Samples</b>: Type = Sleep Analysis, Start Date is in the last 1 day, Value is Asleep (not In Bed). <b>Calculate Statistics</b> (Sum) of duration, in hours. Name it Sleep.<br>
+    4. Add <b>Open URLs</b> with exactly:<br><code style="word-break:break-all;color:var(--glow)">${location.origin}${location.pathname}?steps=[Steps]&amp;sleep=[Sleep]</code><br>
+    (tap the bracket names and insert your two variables, rounded to whole numbers for steps).<br>
+    5. Shortcuts &gt; <b>Automation</b> &gt; + &gt; Time of Day (say 9:00 AM, daily) &gt; Run Shortcut &gt; set <b>Run Immediately</b>.</p>
+    <p class="dim">Wear the watch to bed so sleep is recorded. If a step does not match your iOS version, the Quests tab still takes steps and sleep by hand. Exact action names can differ slightly between iOS versions.</p></div>
     <div class="win"><h2>Apple Watch</h2>
-    <p class="dim">1. Watch app on iPhone &gt; Calendar &gt; Mirror my iPhone, so alarms tap your wrist.<br>2. Start the named workout type from the Gate screen.<br>3. Type your green Exercise minutes into Quests. No double counting.<br>4. The watch BP and sleep apnea alerts are not for you. Use your cuff and CPAP.<br>5. Beta blocker: use the talk test, not heart rate.</p></div>
+    <p class="dim">1. Watch app on iPhone &gt; Calendar &gt; Mirror my iPhone, so alarms tap your wrist.<br>2. Start the named workout type from the Gate screen.<br>3. Type your green Exercise minutes into Quests. No double counting.<br>4. The watch BP and sleep apnea alerts are not for you. Use a real BP cuff.<br>5. Beta blocker: use the talk test, not heart rate.</p></div>
     <div class="win"><h2>Targets</h2><div class="stat"><span>Calories</span><b>${S.targets.calories}</b></div><div class="stat"><span>Protein</span><b>${S.targets.protein} g</b></div>
     <p class="dim">Pace ~1 lb/week. About ${S.targets.months} months to goal. If you lose faster than 2 lb/week, eat more.</p>
     <label>Goal weight (lb)</label><input id="s-goal" type="number" value="${S.profile.goalLb}"><button data-act="goal" style="margin-top:8px">Update goal</button></div>
@@ -218,6 +229,8 @@
     on('#in-walk', () => { day().walkMin = num('#in-walk'); afterEdit(); });
     on('#in-ring', () => { day().ringMin = num('#in-ring'); afterEdit(); });
     on('#in-prot', () => { day().protein = num('#in-prot'); afterEdit(); });
+    on('#in-sleephr', () => { day().sleepHr = num('#in-sleephr'); afterEdit(); });
+    on('#in-steps', () => { day().steps = num('#in-steps'); afterEdit(); });
     on('#in-hold', () => { day().hold = $('#in-hold').checked; afterEdit(); });
     on('#in-sleep', () => { day().sleep = $('#in-sleep').checked; afterEdit(); });
     on('#in-rest', () => { day().rest = $('#in-rest').checked; afterEdit(); });
@@ -256,8 +269,25 @@
     }
   }
 
+  // ---------- Shortcuts import: ?steps=&sleep=&ring= ----------
+  function importParams() {
+    if (!S) return;
+    const q = new URLSearchParams(location.search);
+    if (![...q.keys()].length) return;
+    const n = k => { const v = parseFloat(q.get(k)); return isFinite(v) && v >= 0 ? v : null; };
+    const st = n('steps'), sl = n('sleep'), rg = n('ring');
+    const d = day();
+    if (st !== null && st < 100000) d.steps = Math.round(st);
+    if (sl !== null && sl <= 24) d.sleepHr = Math.round(sl * 10) / 10;
+    if (rg !== null && rg < 1000) d.ringMin = Math.round(rg);
+    C.settleDay(S, today()); save();
+    try { history.replaceState(null, '', location.pathname); } catch (e) { }
+    tab = 'quests';
+  }
+
   // ---------- launch ----------
   function launch() {
+    importParams();
     render();
     if (!S) return;
     if (S.popup === today()) return;
@@ -265,7 +295,7 @@
     const pen = C.penaltyFor(S, today());
     const line = P.LINES[Math.floor(Math.random() * P.LINES.length)];
     const g = P.gateForDate(new Date());
-    const msg = `${line}\n\nToday's quest: ${g.name}${g.where === 'gym' ? ' (Planet Fitness)' : ''}\nWalk ${C.walkTarget(lv().level)} min. ${S.targets.protein} g protein. CPAP tonight.`;
+    const msg = `${line}\n\nToday's quest: ${g.name}${g.where === 'gym' ? ' (Planet Fitness)' : ''}\nWalk ${C.walkTarget(lv().level)} min or ${C.stepTarget(lv().level).toLocaleString('en-US')} steps. ${S.targets.protein} g protein. Sleep ${C.SLEEP_GOAL}+ hours.`;
     if (pen) sys('PENALTY ZONE', `You failed yesterday's quests.\n\n${pen.text}\n\nThe System does not forget.`, [{ t: 'Accept penalty', cls: 'warn', f: () => { tab = 'quests'; render(); } }], true);
     else sys('DAILY QUEST ARRIVED', msg, [{ t: 'Accept', cls: 'go' }]);
   }

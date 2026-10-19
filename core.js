@@ -47,14 +47,18 @@
     return Math.max(day.walkMin || 0, day.ringMin || 0);
   }
 
+  // Steps and walk minutes describe the same movement: either one clears the quest, never added together.
+  function stepTarget(level) { return Math.min(8000, 4000 + (level - 1) * 250); }
+  const SLEEP_GOAL = 7;
+
   function questsFor(day, ctx) {
-    const wt = walkTarget(ctx.level);
+    const wt = walkTarget(ctx.level), stt = stepTarget(ctx.level);
     return [
-      { id: 'walk', name: 'Cardio Training', desc: `Walk ${wt} min (talk-test pace)`, xp: 30, stat: 'agi', done: effectiveWalk(day) >= wt },
+      { id: 'walk', name: 'Cardio Training', desc: `Walk ${wt} min or ${stt.toLocaleString('en-US')} steps (talk-test pace)`, xp: 30, stat: 'agi', done: effectiveWalk(day) >= wt || (day.steps || 0) >= stt },
       { id: 'hold', name: 'Pressure Seal', desc: 'Wall sit / isometric holds, 4 x 30s, breathe the whole time', xp: 25, stat: 'vit', done: !!day.hold },
       { id: 'protein', name: 'Fuel the Body', desc: `Hit ${ctx.protein} g protein`, xp: 25, stat: 'vit', done: (day.protein || 0) >= ctx.protein },
       { id: 'weigh', name: 'Status Check', desc: 'Log your morning weight', xp: 10, stat: 'int', done: !!day.weight },
-      { id: 'sleep', name: 'Recovery', desc: 'CPAP on, in bed on time', xp: 20, stat: 'vit', done: !!day.sleep }
+      { id: 'sleep', name: 'Recovery', desc: `Sleep ${SLEEP_GOAL}+ hours (watch) or tick if in bed on time`, xp: 20, stat: 'vit', done: !!day.sleep || (day.sleepHr || 0) >= SLEEP_GOAL }
     ];
   }
 
@@ -170,7 +174,7 @@
     return L.join('\r\n') + '\r\n';
   }
 
-  const api = { RANKS, dayKey, parseKey, addDays, xpForLevel, levelFromXp, rankForLevel, targets, walkTarget, effectiveWalk, questsFor, dayComplete, penaltyFor, xpAt, totalXp, award, settleDay, streak, stats, buildIcs };
+  const api = { RANKS, dayKey, parseKey, addDays, xpForLevel, levelFromXp, rankForLevel, targets, walkTarget, stepTarget, SLEEP_GOAL, effectiveWalk, questsFor, dayComplete, penaltyFor, xpAt, totalXp, award, settleDay, streak, stats, buildIcs };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Core = api;
 })(typeof window !== 'undefined' ? window : globalThis);

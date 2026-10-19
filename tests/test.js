@@ -68,4 +68,13 @@ t('ics: valid structure, alarms, no duplicate UIDs, off reminders skipped', () =
   assert((ics.match(/BEGIN:VALARM/g) || []).length === 6); assert(ics.includes('RRULE:FREQ=DAILY'));
   assert(ics.split('\r\n').every(l => l.length <= 75));
 });
+t('steps or minutes clear walk quest, not summed; watch sleep hours clear sleep quest', () => {
+  const s = mk(), d = '2026-10-05';
+  s.days[d] = { steps: 4000, sleepHr: 7.4 }; C.settleDay(s, d);
+  assert(s.xpLog.some(e => e.key === 'q:walk')); assert(s.xpLog.some(e => e.key === 'q:sleep'));
+  s.days[d] = { steps: 3000, sleepHr: 5 }; C.settleDay(s, d);
+  assert(!s.xpLog.some(e => e.key === 'q:walk')); assert(!s.xpLog.some(e => e.key === 'q:sleep'));
+  s.days[d] = { steps: 4000, walkMin: 20 }; C.settleDay(s, d);
+  assert.strictEqual(s.xpLog.filter(e => e.key === 'q:walk').length, 1);
+});
 console.log(`\n${n} checks passed`);
