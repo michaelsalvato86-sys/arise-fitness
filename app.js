@@ -99,7 +99,8 @@
   function quests() {
     const d = day(), c = ctx(), qs = C.questsFor(d, c), pen = C.penaltyFor(S, today());
     const bpHtml = S.bp.slice(-3).reverse().map(b => `${b.day.slice(5)}: ${b.sys}/${b.dia}`).join('  |  ') || 'none yet';
-    return `<h1>Daily Quests</h1>
+    const sync = S.lastSync ? 'Health synced ' + new Date(S.lastSync).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'Health not synced yet';
+    return `<h1>Daily Quests</h1><div class="dim" style="margin:-4px 0 10px">${sync}</div>
     ${pen ? `<div class="win red"><h2>Penalty Zone</h2><div>${esc(pen.text)}</div><button class="warn" data-act="pen" style="margin-top:10px">Penalty done</button></div>` : ''}
     <div class="win">${qs.map(q => `<div class="q ${q.done ? 'done' : ''}"><div class="chk">${q.done ? '&#10003;' : ''}</div><div style="flex:1"><div class="nm">${esc(q.name)}</div><div class="dim">${esc(q.desc)}</div></div><div class="xp">+${q.xp}</div></div>`).join('')}
     <div class="dim" style="margin-top:8px">All five: +40 XP bonus</div></div>
@@ -280,6 +281,7 @@
     if (st !== null && st < 100000) d.steps = Math.round(st);
     if (sl !== null && sl <= 24) d.sleepHr = Math.round(sl * 10) / 10;
     if (rg !== null && rg < 1000) d.ringMin = Math.round(rg);
+    S.lastSync = Date.now();
     C.settleDay(S, today()); save();
     try { history.replaceState(null, '', location.pathname); } catch (e) { }
     tab = 'quests';
